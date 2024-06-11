@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package api;
+
+import "google/protobuf/empty.proto";
+
+option go_package = ".;api";
+
+
+service APIServiceGarantex {
+    rpc GetRates(google.protobuf.Empty) returns (GetRatesResponse) ;
+    rpc HealthCheck (google.protobuf.Empty) returns (HealthCheckResponse);
+}
+
+message GetRatesResponse {
+    int64 timestamp = 1;
+    string asks_price = 2;
+    string bids_price = 3; 
+}
+
+message HealthCheckResponse {
+    string status = 1;
+}
