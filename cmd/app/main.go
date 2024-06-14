@@ -64,11 +64,11 @@ func main() {
 	}
 
 
-	sevice := client.NewClient(logger)
+	sevice := client.NewClient(logger,tr)
 	app := rates.NewApp(logger,storage,sevice)
 
 
-	err = grpcapi.RunGrpcServer(ctx,logger,app,&apiConfig)
+	err = grpcapi.RunGrpcServer(ctx,logger,app,&apiConfig,tr)
 	if err != nil{
 		logger.Error("Grpc server",zap.String("error",err.Error()))
 	}

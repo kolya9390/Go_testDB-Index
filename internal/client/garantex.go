@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -18,16 +19,20 @@ type GarantexService interface {
 type Client struct {
 	garantex http.Client
 	Logger   *zap.Logger
+	tr trace.Tracer
 }
 
-func NewClient(Logger *zap.Logger) *Client {
+func NewClient(Logger *zap.Logger,tr trace.Tracer) *Client {
 	return &Client{
 		garantex: http.Client{},
 		Logger:   Logger,
+		tr: tr,
 	}
 }
 
 func (c *Client) GetRates(market string,ctx context.Context) (*types.DataMD, error) {
+	ctx,span := c.tr.Start(ctx,"garantex GetRates")
+	defer span.End()
 	url := fmt.Sprintf("https://garantex.org/api/v2/depth?market=%s", market)
 
 	req, err := http.NewRequestWithContext(ctx,"GET",url,nil)
