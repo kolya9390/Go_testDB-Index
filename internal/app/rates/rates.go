@@ -1,6 +1,7 @@
 package rates
 
 import (
+	"context"
 	"db-index/internal/client"
 	"db-index/internal/domain"
 	"db-index/internal/storage/postgres"
@@ -30,9 +31,9 @@ func NewApp(logger *zap.Logger,
 		}
 	}
 
-func (a *App) Get() (domain.Rates,error) {
+func (a *App) Get(ctx context.Context) (domain.Rates,error) {
 
-	respRates ,err := a.servises.GetRates("usdrub")
+	respRates ,err := a.servises.GetRates("usdtrub",ctx)
 	if err != nil {
 		return domain.Rates{},err
 	}
@@ -43,7 +44,7 @@ func (a *App) Get() (domain.Rates,error) {
 		BidPrice: respRates.Bids[0].Price,
 	}
 
-	err = a.storage.Add(rates)
+	err = a.storage.AddRates(ctx,rates)
 
 	if err != nil {
 		return domain.Rates{},err

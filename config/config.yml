@@ -1,0 +1,11 @@
+postgres:
+  user: "postgres"
+  password: "postgres"
+  host: "localhost"
+  port: "5432"
+  database: "test"
+  migrations_dir: migrations\rates
+
+GRPCApiAddr:
+  grpc_port: "1001"
+  grpc_host: "localhost"
