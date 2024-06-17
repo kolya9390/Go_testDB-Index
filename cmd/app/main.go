@@ -7,13 +7,11 @@ import (
 	"db-index/internal/client"
 	grpcapi "db-index/internal/grpc_api"
 	"db-index/internal/storage/postgres"
-	"db-index/pkg/tracing"
 	"flag"
+	"net/http"
 	"os"
 	"os/signal"
 
-	fiber "github.com/gofiber/fiber/v2"
-	"github.com/gofiber/contrib/otelfiber"
 	"go.uber.org/zap"
 )
 
@@ -44,31 +42,27 @@ func main() {
 
 	// Init Tracing
 
-	tr , err := tracing.InitTracer("http://localhost:14268/api/traces", "Rates Service")
-
+	
 	if err != nil {
 		logger.Fatal("failed to initialize tracer", zap.Error(err))
 	}
-	f := fiber.New()
-	f.Use(otelfiber.Middleware())
-
 
 	logger.Info("service starting")
 
 	// Init Storage and Postgres
 
-	storage := postgres.NewStorage(logger,tr)
+	storage := postgres.NewStorage(logger)
 	err = storage.InitDB(apiConfig.Postgres)
 	if err != nil{
 		logger.Error("Storage",zap.String("error",err.Error()))
 	}
 
-
-	sevice := client.NewClient(logger,tr)
+	garantex := http.Client{}
+	sevice := client.NewClient(&garantex,logger)
 	app := rates.NewApp(logger,storage,sevice)
 
 
-	err = grpcapi.RunGrpcServer(ctx,logger,app,&apiConfig,tr)
+	err = grpcapi.RunGrpcServer(ctx,logger,app,&apiConfig)
 	if err != nil{
 		logger.Error("Grpc server",zap.String("error",err.Error()))
 	}

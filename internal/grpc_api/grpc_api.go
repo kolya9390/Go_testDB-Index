@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net"
 
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -18,7 +17,6 @@ import (
 type GRPCAPIService struct {
 	app		*rates.App
 	logger	*zap.Logger
-	tr trace.Tracer
 
 	api.UnimplementedAPIServiceGarantexServer
 }
@@ -26,11 +24,10 @@ type GRPCAPIService struct {
 
 
 func NewGRPCAPIService(app	*rates.App,
-	logger	*zap.Logger,tr trace.Tracer) *GRPCAPIService{
+	logger	*zap.Logger) *GRPCAPIService{
 	return &GRPCAPIService{
 		app: app,
 		logger: logger,
-		tr: tr,
 
 		UnimplementedAPIServiceGarantexServer: api.UnimplementedAPIServiceGarantexServer{},
 
@@ -38,12 +35,10 @@ func NewGRPCAPIService(app	*rates.App,
 }
 
 
-func RunGrpcServer(ctx context.Context, logger *zap.Logger, app *rates.App, config *config.Config,tr trace.Tracer) error {
+func RunGrpcServer(ctx context.Context, logger *zap.Logger, app *rates.App, config *config.Config) error {
 	logger.Info("Starting grpc server")
-	grpcAPIService := NewGRPCAPIService(app,logger,tr)
+	grpcAPIService := NewGRPCAPIService(app,logger)
 	grpcServer := grpc.NewServer()
-	ctx,span :=tr.Start(ctx,"RunGRPCServer")
-	defer span.End()
 	reflection.Register(grpcServer)
 	api.RegisterAPIServiceGarantexServer(grpcServer,grpcAPIService)
 
@@ -71,8 +66,6 @@ func RunGrpcServer(ctx context.Context, logger *zap.Logger, app *rates.App, conf
 
 func (g *GRPCAPIService) GetRates(ctx context.Context, empty *emptypb.Empty) (*api.GetRatesResponse, error) {
 
-	_,span := g.tr.Start(ctx,"GetRates")
-	defer span.End()
 	resp,err := g.app.Get(ctx)
 	if err != nil {
 		g.logger.Error("GRPS GetRates",zap.String("App Resp",err.Error()))

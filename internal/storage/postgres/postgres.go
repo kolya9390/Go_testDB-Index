@@ -12,6 +12,7 @@ import (
 	"github.com/Masterminds/squirrel"
 	_ "github.com/lib/pq"
 	migrate "github.com/rubenv/sql-migrate"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -29,11 +30,11 @@ type DB struct {
 	logger *zap.Logger
 }
 
-func NewStorage(logger *zap.Logger,tracer trace.Tracer) *DB {
+func NewStorage(logger *zap.Logger) *DB {
 	return &DB{
 		logger: logger,
 		psql: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
-		tracer: tracer,
+		tracer: otel.Tracer("fiber-server"),
 	}
 
 }
@@ -96,7 +97,8 @@ func migrateDB(path string,db *sql.DB) error {
 }
 
 func (d *DB) AddRates(ctx context.Context,rates domain.Rates) error {
-	ctx, span := d.tracer.Start(ctx, "AddRates", trace.WithSpanKind(trace.SpanKindClient))
+	tracer := otel.Tracer("fiber-server")
+	_, span := tracer.Start(ctx, "AddRates", trace.WithAttributes())
 
 	span.SetAttributes(attribute.Key("param.rates.AskPrice").String(rates.AskPrice))
 	defer span.End()

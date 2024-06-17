@@ -3,6 +3,8 @@ build:
 
 docker-build:
 	docker build .
+test:
+	go test -v ./...
 
 run:
 	docker compose -f "docker-compose.yml" up -d --build
