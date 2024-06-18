@@ -3,12 +3,12 @@ package client
 import (
 	"context"
 	"db-index/internal/client/types"
+	"db-index/pkg/logster"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -22,23 +22,19 @@ type HTTPClient interface {
 
 type Client struct {
 	garantex HTTPClient
-	logger   *zap.Logger
-	tr trace.Tracer
+	logger logster.Logger
 }
 
-func NewClient(garantex HTTPClient,logger *zap.Logger) *Client {
+func NewClient(garantex HTTPClient,logger logster.Logger) *Client {
 	return &Client{
 		garantex: garantex,
 		logger:   logger,
-		tr: trace.NewNoopTracerProvider().Tracer("Garantex GetRates"),
 	}
 }
 
 func (c *Client) GetRates(market string,ctx context.Context) (*types.DataMD, error) {
 	url := fmt.Sprintf("https://garantex.org/api/v2/depth?market=%s", market)
 
-	_,span := c.tr.Start(ctx,"garantex GetRates",trace.WithAttributes())
-	defer span.End()
 
 	req, err := http.NewRequestWithContext(ctx,"GET",url,nil)
 

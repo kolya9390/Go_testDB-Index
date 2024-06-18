@@ -7,6 +7,7 @@ import (
 	"db-index/internal/client"
 	grpcapi "db-index/internal/grpc_api"
 	"db-index/internal/storage/postgres"
+	"db-index/pkg/logster"
 	"flag"
 	"net/http"
 	"os"
@@ -28,43 +29,41 @@ func main() {
 
 	flag.Parse()
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+
 	// Init Logger 
 
 	logger, _ := zap.NewDevelopment()
-	defer logger.Sync()
+	zapLogger := logger.With(zap.String("service", "Rates"))
+	log := logster.NewFactory(zapLogger)
+
 
 	if err != nil {
 		logger.Fatal("Env",zap.String("err",err.Error()),zap.String("Path",configPath))
-	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
-
-	// Init Tracing
-
-	
-	if err != nil {
-		logger.Fatal("failed to initialize tracer", zap.Error(err))
 	}
 
 	logger.Info("service starting")
 
 	// Init Storage and Postgres
 
-	storage := postgres.NewStorage(logger)
-	err = storage.InitDB(apiConfig.Postgres)
+	storage := postgres.NewStorage(log)
+	err = storage.InitDB(ctx,apiConfig.Postgres)
 	if err != nil{
 		logger.Error("Storage",zap.String("error",err.Error()))
 	}
 
+	defer func() {
+		storage.Stop()
+		stop()
+	}()
+
 	garantex := http.Client{}
-	sevice := client.NewClient(&garantex,logger)
-	app := rates.NewApp(logger,storage,sevice)
+	sevice := client.NewClient(&garantex,log.For(ctx))
+	app := rates.NewApp(log,storage,sevice)
 
-
-	err = grpcapi.RunGrpcServer(ctx,logger,app,&apiConfig)
+	// init Grpc Server
+	err = grpcapi.RunGrpcServer(ctx,log,app,&apiConfig,"otlp")
 	if err != nil{
 		logger.Error("Grpc server",zap.String("error",err.Error()))
 	}
-
 }

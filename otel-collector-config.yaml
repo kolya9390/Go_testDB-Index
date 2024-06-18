@@ -1,0 +1,42 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  jaeger:
+    protocols:
+      grpc:
+      thrift_binary:
+      thrift_compact:
+      thrift_http:
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+
+  otlp:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+    timeout: 30s  # Увеличить таймаут до 30 секунд
+
+processors:
+  batch:
+  resource:
+    attributes:
+      - key: service.Rates
+        value: test-garantex-rates
+        action: upsert
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp, jaeger]
+      processors: [batch, resource]
+      exporters: [otlp]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus]

@@ -5,23 +5,22 @@ import (
 	"db-index/internal/client"
 	"db-index/internal/domain"
 	"db-index/internal/storage/postgres"
+	"db-index/pkg/logster"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 type ImplementationApp interface {
-	Get() (domain.Rates,error)
+	Get(ctx context.Context) (domain.Rates,error)
 }
 
 type App struct {
-	logger *zap.Logger
-	storage postgres.Soraged
+	logger logster.Factory
+	storage postgres.Storaged
 	servises client.GarantexService
 }
 
-func NewApp(logger *zap.Logger,
-	storage postgres.Soraged,
+func NewApp(logger logster.Factory,
+	storage postgres.Storaged,
 	servises client.GarantexService) *App {
 
 		return &App{

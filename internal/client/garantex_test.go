@@ -3,13 +3,13 @@ package client
 import (
 	"context"
 	"db-index/internal/client/types"
+	"db-index/pkg/logster"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -66,13 +66,13 @@ func TestClient_GetRates(t *testing.T) {
 
 	loggerConfig := zap.NewDevelopmentConfig()	
 	logger, _ := loggerConfig.Build()
+	zapLogger := logger.With(zap.String("service", "TESTS gatantex Client api"))
+	log := logster.NewFactory(zapLogger)
 	defer logger.Sync()
 
 	client :=  &Client{
 		garantex: mockClient,
-		logger: logger,
-		tr: trace.NewNoopTracerProvider().Tracer("test"),
-	
+		logger: log.For(context.Background()),
 	}
 
 	ctx := context.Background()
