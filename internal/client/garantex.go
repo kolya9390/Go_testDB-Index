@@ -22,10 +22,11 @@ type HTTPClient interface {
 
 type Client struct {
 	garantex HTTPClient
-	logger logster.Logger
+	logger logster.Factory
 }
 
-func NewClient(garantex HTTPClient,logger logster.Logger) *Client {
+func NewClient(garantex HTTPClient,logger logster.Factory) *Client {
+
 	return &Client{
 		garantex: garantex,
 		logger:   logger,
@@ -39,7 +40,7 @@ func (c *Client) GetRates(market string,ctx context.Context) (*types.DataMD, err
 	req, err := http.NewRequestWithContext(ctx,"GET",url,nil)
 
 	if err != nil {
-		c.logger.Error("Do Conect", zap.String("err", err.Error()))
+		c.logger.For(ctx).Error("Do Conect", zap.String("err", err.Error()))
 		return nil, err
 	}
 
@@ -48,29 +49,29 @@ func (c *Client) GetRates(market string,ctx context.Context) (*types.DataMD, err
 	defer func() {
 		err := res.Body.Close()
 		if err != nil {
-			c.logger.Error("Bad close", zap.String("err", err.Error()))
+			c.logger.For(ctx).Error("Bad close", zap.String("err", err.Error()))
 		}
 	}()
 
 	if res.StatusCode != http.StatusOK {
-		c.logger.Error("Unexpected HTTP status code", zap.Int("status_code", res.StatusCode))
+		c.logger.For(ctx).Error("Unexpected HTTP status code", zap.Int("status_code", res.StatusCode))
 		return nil, fmt.Errorf("unexpected HTTP status code: %d", res.StatusCode)
 	}
 
 	bodyText, err := io.ReadAll(res.Body)
 	if err != nil {
-		c.logger.Error("Read", zap.String("err", err.Error()))
+		c.logger.For(ctx).Error("Read", zap.String("err", err.Error()))
 	}
 
 	var respMarketData types.DataMD
 
 	err = json.Unmarshal(bodyText, &respMarketData)
 	if err != nil {
-		c.logger.Error("Unmarshal", zap.String("err", err.Error()))
+		c.logger.For(ctx).Error("Unmarshal", zap.String("err", err.Error()))
 		return nil, err
 	}
 
-	c.logger.Info("sucssesful req api garantex", zap.String("url", url),zap.String("resp Asc Price",respMarketData.Asks[0].Price))
+	c.logger.For(ctx).Info("sucssesful req api garantex", zap.String("url", url),zap.String("resp Asc Price",respMarketData.Asks[0].Price))
 
 	return &respMarketData, nil
 

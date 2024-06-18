@@ -72,7 +72,7 @@ func TestClient_GetRates(t *testing.T) {
 
 	client :=  &Client{
 		garantex: mockClient,
-		logger: log.For(context.Background()),
+		logger: log,
 	}
 
 	ctx := context.Background()

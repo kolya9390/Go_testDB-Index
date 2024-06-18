@@ -6,12 +6,12 @@ import (
 	"db-index/internal/api"
 	"db-index/internal/app/rates"
 	"db-index/pkg/logster"
-	"db-index/pkg/tracing"
 	"encoding/json"
 	"fmt"
 	"net"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -44,10 +44,8 @@ func RunGrpcServer(ctx context.Context,
 	logger logster.Factory,
 	implementationApp rates.ImplementationApp,
 	config *config.Config,
-	otelExporter string) error {
+	tracerProvider trace.TracerProvider) error {
 	logger.Bg().Info("Starting", zap.String("address", config.GRPCPort), zap.String("type", "gRPC"))
-
-	tracerProvider := tracing.InitOTEL("GRPC for api Garantex Get Rates", otelExporter, logger)
 
 	grpcAPIService := NewGRPCAPIService(implementationApp, logger)
 

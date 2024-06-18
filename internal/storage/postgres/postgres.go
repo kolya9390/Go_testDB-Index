@@ -15,7 +15,9 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/uptrace/opentelemetry-go-extra/otelsql"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -30,12 +32,14 @@ type Storaged interface {
 type DB struct {
 	db *sql.DB
 	psql squirrel.StatementBuilderType
+	tracer trace.Tracer
 	logger logster.Factory
 }
 
-func NewStorage(logger logster.Factory) *DB {
+func NewStorage(logger logster.Factory,tp trace.Tracer,) *DB {
 	return &DB{
 		logger: logger,
+		tracer: tp,
 		psql: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
 	}
 
@@ -105,6 +109,9 @@ func migrateDB(path string, db *sql.DB) error {
 }
 
 func (d *DB) AddRates(ctx context.Context,rates domain.Rates) error {
+	ctx, span := d.tracer.Start(ctx, "AddRates", trace.WithSpanKind(trace.SpanKindClient))
+	span.SetAttributes(attribute.Key("rates.AskPrice").String(rates.AskPrice))
+	defer span.End()
 
 	query := d.psql.Insert("rates").
             Columns("timestamp", "ask_price", "bid_price").

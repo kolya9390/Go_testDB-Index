@@ -8,11 +8,13 @@ import (
 	grpcapi "db-index/internal/grpc_api"
 	"db-index/internal/storage/postgres"
 	"db-index/pkg/logster"
+	"db-index/pkg/tracing"
 	"flag"
 	"net/http"
 	"os"
 	"os/signal"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 )
 
@@ -37,6 +39,10 @@ func main() {
 	zapLogger := logger.With(zap.String("service", "Rates"))
 	log := logster.NewFactory(zapLogger)
 
+	// Init Tracing
+
+	tracerProvider := tracing.InitOTEL("GRPC for api Garantex Get Rates", "otlp", log)
+
 
 	if err != nil {
 		logger.Fatal("Env",zap.String("err",err.Error()),zap.String("Path",configPath))
@@ -46,7 +52,8 @@ func main() {
 
 	// Init Storage and Postgres
 
-	storage := postgres.NewStorage(log)
+	storage := postgres.NewStorage(log,tracerProvider.Tracer("Postgres DB"))
+
 	err = storage.InitDB(ctx,apiConfig.Postgres)
 	if err != nil{
 		logger.Error("Storage",zap.String("error",err.Error()))
@@ -57,12 +64,20 @@ func main() {
 		stop()
 	}()
 
-	garantex := http.Client{}
-	sevice := client.NewClient(&garantex,log.For(ctx))
+
+	// Init HTTP Client
+
+	garantex := http.Client{
+		Transport: otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithTracerProvider(tracerProvider),
+		),
+	}
+	sevice := client.NewClient(&garantex,log)
 	app := rates.NewApp(log,storage,sevice)
 
 	// init Grpc Server
-	err = grpcapi.RunGrpcServer(ctx,log,app,&apiConfig,"otlp")
+	err = grpcapi.RunGrpcServer(ctx,log,app,&apiConfig,tracerProvider)
 	if err != nil{
 		logger.Error("Grpc server",zap.String("error",err.Error()))
 	}
